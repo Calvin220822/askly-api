@@ -2,7 +2,6 @@ from fastapi import FastAPI
 
 app = FastAPI()
 
-
 @app.get("/api/agents")
 def get_agents():
     return {
@@ -58,3 +57,32 @@ def get_models():
     }  
 
 
+@app.post("/api/agents/create")
+def create_agent(agent: dict):
+    return {
+        "code": 0,
+        "message": "Agent created successfully",
+        "data": {
+            "id": "new_agent_id",
+            "name": agent.get("name", "New Agent"),
+            "created_at": 1755677540229,
+            "visibility": agent.get("visibility", "private"),
+        },
+    }
+
+@app.post("api/agents/save")
+def save_agent(agent: dict):
+    return {
+        "code": 0,
+        "message": "Agent saved successfully",
+        "data": {
+            "id": agent.get("id", "existing_agent_id"),
+            "name": agent.get("name", "Updated Agent"),
+            "updated_at": 1755677540229,
+            "visibility": agent.get("visibility", "private"),
+            "temperature": agent.get("temperature", 0),
+            "max_tokens": agent.get("max_tokens", 1000),
+            "instructions": agent.get("instructions"),
+            "model": agent.get("model", "gpt-3.5-turbo"),
+        },
+    }
