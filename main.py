@@ -1,88 +1,12 @@
 from fastapi import FastAPI
+from db import init_db
+from routers import agents, files
 
 app = FastAPI()
 
-@app.get("/api/agents")
-def get_agents():
-    return {
-        "code": 0,
-        "message": "success",
-        "data": [
-            {
-                "id": "nLR8rOqcdTfn9UmSswBQS",
-                "name": "教你如何从0到1,开发上线一个对接了openAI的机器人.pdf",
-                "last_trained_at": 1755677533944,
-                "visibility": "private",
-            },
-            {
-                "id": "nLR8rOqcdTfn9UmSswBQS23",
-                "name": "客服名称2",
-                "last_trained_at": 1755677540229,
-                "visibility": "private",
-            }
-        ],
-    }
+# 初始化数据库连接池
+init_db()
 
-@app.get("/api/agents/{agent_id}")
-def get_agent(agent_id: str):
-    return {
-        "code": 0,
-        "message": "success",
-        "data": {
-            "id": agent_id,
-            "name": "教你如何从0到1,开发上线一个对接了openAI的机器人.pdf",
-            "description": "这是一个示例机器人，用于展示如何使用OpenAI API。",
-            "created_at": 1755677533944,
-            "updated_at": 1755677540229,
-            "visibility": "private",
-            "model": "gpt-3.5-turbo",
-            "embedding_model": "text-embedding-3-small",
-            "instructions": "请根据用户输入提供相关信息和帮助。",
-            "status": "trained",
-            "temperature": 0,
-            "max_tokens": 1000,
-        },
-    }
-
-@app.get("/api/models")
-def get_models():
-    return {
-        "code": 0,
-        "message": "success",
-        "data": [
-            {"id": "gpt-3.5-turbo", "name": "GPT-3.5 Turbo"},
-            {"id": "gpt-4", "name": "GPT-4"},
-            {"id": "text-embedding-3-small", "name": "Text Embedding 3 Small"},
-        ],
-    }  
-
-
-@app.post("/api/agents/create")
-def create_agent(agent: dict):
-    return {
-        "code": 0,
-        "message": "Agent created successfully",
-        "data": {
-            "id": "new_agent_id",
-            "name": agent.get("name", "New Agent"),
-            "created_at": 1755677540229,
-            "visibility": agent.get("visibility", "private"),
-        },
-    }
-
-@app.post("api/agents/save")
-def save_agent(agent: dict):
-    return {
-        "code": 0,
-        "message": "Agent saved successfully",
-        "data": {
-            "id": agent.get("id", "existing_agent_id"),
-            "name": agent.get("name", "Updated Agent"),
-            "updated_at": 1755677540229,
-            "visibility": agent.get("visibility", "private"),
-            "temperature": agent.get("temperature", 0),
-            "max_tokens": agent.get("max_tokens", 1000),
-            "instructions": agent.get("instructions"),
-            "model": agent.get("model", "gpt-3.5-turbo"),
-        },
-    }
+# 挂载路由
+app.include_router(agents.router, prefix="/api")
+app.include_router(files.router, prefix="/api")
