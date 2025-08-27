@@ -1,6 +1,10 @@
 from fastapi import FastAPI
 from db import init_db
 from routers import agents, files
+from dotenv import load_dotenv
+
+# Load environment variables from .env
+load_dotenv()
 
 app = FastAPI()
 

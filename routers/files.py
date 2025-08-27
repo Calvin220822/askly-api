@@ -2,10 +2,27 @@ from fastapi import APIRouter, HTTPException
 from models import FileInfo
 from db import get_conn
 from datetime import datetime
+from supabase import create_client
+import os
 
 router = APIRouter()
 
-@router.post("/files")
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
+supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+
+# get presigned URL for file upload
+@router.post("/file/presigned_url")
+def get_presigned_url(bucket: str, file_name: str):
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    file_path = f"user_uploads/{timestamp}_{file_name}"
+
+    # 生成 signed URL，过期时间 1 小时
+    signed_url = supabase.storage.from_(bucket).create_signed_url(file_path, 3600)
+
+    return {"upload_url": signed_url, "file_path": file_path}
+
+@router.post("/file/save_metadata")
 def save_file(file_info: FileInfo):
     insert_sql = """
         INSERT INTO files (user_id, bucket, path, size, mime_type, created_at, updated_at)
@@ -15,7 +32,7 @@ def save_file(file_info: FileInfo):
     try:
         with get_conn() as conn:
             cur = conn.cursor()
-            now = datetime.utcnow()
+            now = datetime.now()
             cur.execute(
                 insert_sql,
                 (

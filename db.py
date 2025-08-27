@@ -1,11 +1,7 @@
-from dotenv import load_dotenv
 import os
 from psycopg2.pool import SimpleConnectionPool
 from contextlib import contextmanager
 from typing import Optional
-
-# Load environment variables from .env
-load_dotenv()
 
 # Fetch variables
 USER = os.getenv("DB_USER")
