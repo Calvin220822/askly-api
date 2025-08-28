@@ -1,26 +1,66 @@
 from fastapi import APIRouter, HTTPException
-from models import FileInfo
+from models import FileInfo, PresignedURLRequest
 from db import get_conn
 from datetime import datetime
 from supabase import create_client
 import os
+from urllib.parse import unquote
+from storage3.exceptions import StorageApiError
 
 router = APIRouter()
 
-SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
-supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+supabase = create_client(
+    os.getenv("SUPABASE_URL", ""),
+    os.getenv("SUPABASE_SERVICE_KEY", "")
+)
 
 # get presigned URL for file upload
 @router.post("/file/presigned_url")
-def get_presigned_url(bucket: str, file_name: str):
-    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    file_path = f"user_uploads/{timestamp}_{file_name}"
+def get_presigned_url(request: PresignedURLRequest):
+    try:
+        # Verify bucket exists
+        buckets = supabase.storage.list_buckets()
+        print(buckets)
+        if not any(bucket.name == request.bucket for bucket in buckets):
+            raise HTTPException(
+                status_code=404,
+                detail=f"Bucket '{request.bucket}' not found"
+            )
 
-    # 生成 signed URL，过期时间 1 小时
-    signed_url = supabase.storage.from_(bucket).create_signed_url(file_path, 3600)
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        decoded_filename = unquote(request.file_name)
+        safe_filename = "".join(c for c in decoded_filename if c.isalnum() or c in ('-', '_', '.'))
+        
+        file_path = f"user_uploads/{timestamp}_{safe_filename}"
 
-    return {"upload_url": signed_url, "file_path": file_path}
+        # Create signed URL
+        signed_url = supabase.storage.from_(request.bucket).create_signed_url(
+            path=file_path,
+            expires_in=3600,
+            options={
+                "content-type": "application/octet-stream",
+                "upsert": "true"
+            }
+        )
+
+        if not signed_url:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to generate signed URL"
+            )
+
+        return {"upload_url": signed_url, "file_path": file_path}
+
+    except StorageApiError as e:
+        raise HTTPException(
+            status_code=e.statusCode,
+            detail=f"Storage API error: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Internal server error: {str(e)}"
+        )
 
 @router.post("/file/save_metadata")
 def save_file(file_info: FileInfo):

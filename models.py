@@ -20,3 +20,7 @@ class FileInfo(BaseModel):
     path: str
     size: int
     mime_type: str
+
+class PresignedURLRequest(BaseModel):
+    bucket: str
+    file_name: str
